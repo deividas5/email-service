@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: email-service
+  # Mail defaults — real credentials are injected from Vault (spring.mail.* keys)
+  mail:
+    host: ${spring.mail.host:localhost}
+    port: ${spring.mail.port:25}
+    username: ${spring.mail.username:}
+    password: ${spring.mail.password:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+  thymeleaf:
+    check-template-location: true
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,retry
+  endpoint:
+    health:
+      show-details: always
+
+resilience4j:
+  retry:
+    instances:
+      emailRetry:
+        max-attempts: 3
+        wait-duration: 2s
+        retry-exceptions:
+          - com.example.emailservice.exception.EmailSendException
+          - org.springframework.mail.MailException
+
+logging:
+  level:
+    com.example.emailservice: INFO
+    io.github.resilience4j: DEBUG

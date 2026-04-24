@@ -19,15 +19,15 @@ import org.thymeleaf.spring6.SpringTemplateEngine;
 import java.nio.charset.StandardCharsets;
 
 @Service
-public class EmailServiceImpl implements EmailService {
+public class SmtpEmailService implements EmailService {
 
-    private static final Logger log = LoggerFactory.getLogger(EmailServiceImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(SmtpEmailService.class);
 
     private final JavaMailSender mailSender;
     private final SpringTemplateEngine templateEngine;
     private final RetryRegistry retryRegistry;
 
-    public EmailServiceImpl(JavaMailSender mailSender,
+    public SmtpEmailService(JavaMailSender mailSender,
                             SpringTemplateEngine templateEngine,
                             RetryRegistry retryRegistry) {
         this.mailSender = mailSender;

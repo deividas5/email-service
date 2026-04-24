@@ -29,7 +29,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class EmailServiceTest {
+class SmtpEmailServiceTest {
 
     @Mock
     private JavaMailSender mailSender;
@@ -37,13 +37,13 @@ class EmailServiceTest {
     @Mock
     private SpringTemplateEngine templateEngine;
 
-    private EmailServiceImpl emailService;
+    private SmtpEmailService emailService;
 
     @BeforeEach
     void setUp() {
         // Use a real (no-op) RetryRegistry so @PostConstruct doesn't fail
         RetryRegistry retryRegistry = RetryRegistry.ofDefaults();
-        emailService = new EmailServiceImpl(mailSender, templateEngine, retryRegistry);
+        emailService = new SmtpEmailService(mailSender, templateEngine, retryRegistry);
         emailService.configureRetryLogging();
     }
 
@@ -92,7 +92,7 @@ class EmailServiceTest {
         when(templateEngine.process(anyString(), any(IContext.class)))
                 .thenReturn("<html><body>Hi!</body></html>");
 
-        // null templateVariables should be normalised to empty map by the record compact constructor
+        // null templateVariables is normalised to empty map by the record compact constructor
         EmailRequest request = new EmailRequest("a@b.com", "Hi", "welcome", null);
 
         assertThat(request.templateVariables()).isEmpty();

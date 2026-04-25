@@ -38,6 +38,13 @@ resilience4j:
           - com.example.emailservice.exception.EmailSendException
           - org.springframework.mail.MailException
 
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: alpha
+  api-docs:
+    path: /v3/api-docs
+
 logging:
   level:
     com.example.emailservice: INFO

@@ -1,6 +1,6 @@
 # Email Service
 
-A Spring Boot 3 microservice for sending transactional HTML emails via SMTP. Credentials are loaded from HashiCorp Vault at startup; email sending is protected by a Resilience4j retry policy.
+A Spring Boot 3 microservice for sending transactional HTML emails via SMTP. Email sending is protected by a Resilience4j retry policy and templates are rendered with Thymeleaf.
 
 ## Tech stack
 
@@ -9,7 +9,6 @@ A Spring Boot 3 microservice for sending transactional HTML emails via SMTP. Cre
 | Runtime | Java 21, Spring Boot 3.3 |
 | Email | Spring Mail + JavaMailSender |
 | Templates | Thymeleaf (`src/main/resources/templates/emails/`) |
-| Secrets | HashiCorp Vault (KV v2, `secret/email-service`) |
 | Resilience | Resilience4j `@Retry` — 3 attempts, 2 s back-off |
 | API docs | springdoc-openapi / Swagger UI |
 | Observability | Spring Boot Actuator |
@@ -32,13 +31,12 @@ src/
 │   │   └── service/        EmailService.java (interface) · SmtpEmailService.java
 │   └── resources/
 │       ├── application.yml
-│       ├── bootstrap.yml   (Vault connection)
 │       └── templates/emails/welcome.html
 └── test/
     ├── java/com/example/emailservice/
-    │   ├── EmailIntegrationTest.java   (GreenMail)
-    │   └── service/SmtpEmailServiceTest.java (Mockito)
-    └── resources/bootstrap.yml        (disables Vault in tests)
+    │   ├── EmailIntegrationTest.java          (GreenMail)
+    │   └── service/SmtpEmailServiceTest.java  (Mockito)
+    └── resources/
 ```
 
 ---
@@ -47,7 +45,7 @@ src/
 
 ### Option A — Docker Compose (recommended)
 
-Starts Vault (dev mode), seeds it with dummy SMTP credentials, spins up MailHog as a local SMTP sink, and builds + runs the service.
+Starts MailHog as a local SMTP sink and builds + runs the service. No external services required.
 
 **Prerequisites:** Docker, Docker Compose, Maven
 
@@ -64,7 +62,6 @@ docker-compose up --build
 | `http://localhost:8080/swagger-ui.html` | Swagger UI |
 | `http://localhost:8080/actuator/health` | Health check |
 | `http://localhost:8025` | MailHog — view captured emails |
-| `http://localhost:8200` | Vault UI (token: `devroot`) |
 
 Tear down:
 
@@ -74,30 +71,11 @@ docker-compose down -v
 
 ---
 
-### Option B — Run locally (no Docker)
+### Option B — Run locally
 
-You need a running Vault instance and an SMTP server (or MailHog).
+**Prerequisites:** Java 21, Maven, an SMTP server (real or MailHog)
 
-#### 1. Start Vault in dev mode
-
-```bash
-vault server -dev -dev-root-token-id=devroot
-```
-
-#### 2. Seed SMTP credentials
-
-```bash
-export VAULT_ADDR=http://localhost:8200
-export VAULT_TOKEN=devroot
-
-vault kv put secret/email-service \
-  'spring.mail.host=localhost' \
-  'spring.mail.port=1025' \
-  'spring.mail.username=testuser' \
-  'spring.mail.password=testpassword'
-```
-
-#### 3. (Optional) Start MailHog
+#### 1. (Optional) Start MailHog as a local SMTP server
 
 ```bash
 # macOS
@@ -107,16 +85,19 @@ brew install mailhog && mailhog
 docker run -p 1025:1025 -p 8025:8025 mailhog/mailhog
 ```
 
-#### 4. Run the application
+#### 2. Run the application
 
 ```bash
 mvn spring-boot:run
 ```
 
-Or with explicit Vault coordinates:
+Or pass SMTP credentials directly as environment variables:
 
 ```bash
-VAULT_HOST=localhost VAULT_PORT=8200 VAULT_TOKEN=devroot \
+MAIL_HOST=smtp.example.com \
+MAIL_PORT=587 \
+MAIL_USERNAME=user@example.com \
+MAIL_PASSWORD=secret \
   mvn spring-boot:run
 ```
 
@@ -211,7 +192,16 @@ To add a new template, create `templates/emails/my-template.html` and call the A
 
 ## Configuration reference
 
-### `application.yml` (non-secret)
+### Environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `MAIL_HOST` | `localhost` | SMTP hostname |
+| `MAIL_PORT` | `1025` | SMTP port |
+| `MAIL_USERNAME` | _(empty)_ | SMTP username |
+| `MAIL_PASSWORD` | _(empty)_ | SMTP password |
+
+### `application.yml`
 
 | Key | Default | Description |
 |---|---|---|
@@ -221,37 +211,18 @@ To add a new template, create `templates/emails/my-template.html` and call the A
 | `springdoc.swagger-ui.path` | `/swagger-ui.html` | Swagger UI URL |
 | `springdoc.api-docs.path` | `/v3/api-docs` | Raw OpenAPI spec URL |
 
-### `bootstrap.yml` (Vault connection)
-
-| Key | Default | Description |
-|---|---|---|
-| `VAULT_HOST` env | `localhost` | Vault hostname |
-| `VAULT_PORT` env | `8200` | Vault port |
-| `VAULT_TOKEN` env | `devroot` | Vault root/service token |
-
-### Vault secret path: `secret/email-service`
-
-| Key | Description |
-|---|---|
-| `spring.mail.host` | SMTP hostname |
-| `spring.mail.port` | SMTP port |
-| `spring.mail.username` | SMTP username |
-| `spring.mail.password` | SMTP password |
-
 ---
 
 ## Running tests
 
 ```bash
-# Unit + integration tests (no Vault or SMTP needed)
+# Unit + integration tests (no SMTP server needed)
 mvn test
 ```
 
 Tests use:
 - **Mockito** — `SmtpEmailServiceTest` unit-tests the service in isolation
 - **GreenMail** — `EmailIntegrationTest` spins up an in-memory SMTP server on port 3025 and verifies end-to-end delivery through the REST API
-
-Vault is disabled for all tests via `src/test/resources/bootstrap.yml`.
 
 ---
 

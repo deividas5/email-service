@@ -1,12 +1,11 @@
 spring:
   application:
     name: email-service
-  # Mail defaults — real credentials are injected from Vault (spring.mail.* keys)
   mail:
-    host: ${spring.mail.host:localhost}
-    port: ${spring.mail.port:25}
-    username: ${spring.mail.username:}
-    password: ${spring.mail.password:}
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
